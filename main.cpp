@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <vector>
 #include <memory>
+#include "hrrn.h"
 
 std::vector<Process> makeTestSet() {
   std::vector<Process> procs;
