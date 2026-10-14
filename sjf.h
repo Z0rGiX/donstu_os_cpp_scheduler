@@ -4,11 +4,11 @@
 #include <vector>
 
 // Shortest Job First (невытесняющий)
-class HrrnScheduler : public Scheduler {
+class SjfScheduler : public Scheduler {
 public:
   using Scheduler::Scheduler;
 
-  std::string name() const override { return "HRRN"; }
+  std::string name() const override { return "SJF"; }
 
   void onTick(std::uint64_t tick) override {
     for (auto& p : processes_) {
