@@ -1,6 +1,6 @@
 #include "simulator.h"
 
-SimResult runSimulation(Scheduler& sched, std::uint64_t maxTicks, std::uint64_t swtichCost) {
+SimResult runSimulation(Scheduler& sched, std::uint64_t maxTicks, std::uint64_t switchCost) {
   SimResult res;
   res.algorithm = sched.name();
 
