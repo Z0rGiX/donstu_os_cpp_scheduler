@@ -18,8 +18,12 @@ struct SimResult {
   std::uint64_t totalTicks = 0;
   std::vector<std::pair<int, std::pair<std::uint64_t, std::uint64_t>>> gantt;
   std::uint64_t overheadTicks = 0;
+  // диаграмма Ганта по ядрам: coreGantt[c] = [(pid, {start, end}), ...]
+std::vector<std::vector<std::pair<int, std::pair<std::uint64_t, std::uint64_t>>>> coreGantt;
   double overheadPercent = 0;
 };
 
 // Прогон одного планировщика
 SimResult runSimulation(Scheduler& sched, std::uint64_t maxTicks = 100000, std::uint64_t switchCost = 0);
+SimResult runSimulationMulti(Scheduler& sched, int cores,
+                             std::uint64_t maxTicks = 100000);

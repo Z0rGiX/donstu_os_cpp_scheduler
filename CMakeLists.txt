@@ -10,13 +10,15 @@ add_executable(donstu_os_cpp_scheduler main.cpp
     scheduler.h
     fcfs.h
     sjf.h
+    edf.h
     srtn.h
     rr.h
     priority.h
     mlfq.h
     hrrn.h
     simulator.h
-    testsets.h 
+    testsets.h
+    multicore.cpp
     simulator.cpp
 )
 if(CMAKE_CXX_COMPLIER_ID MATCHES "GNU|Clang")
