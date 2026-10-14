@@ -108,7 +108,7 @@ SimResult runSimulation(Scheduler& sched, std::uint64_t maxTicks, std::uint64_t 
       }
     }
     // 8. Запись в диаграмму Ганта (по фактически выполнявшемуся процессу)
-    if(oveheadTick){
+    if(overheadTick){
       if (!res.gantt.empty() && res.gantt.back().first == -2){
         res.gantt.back().second.second = tick + 1;
       }else{
