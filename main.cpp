@@ -11,6 +11,47 @@
 #include <vector>
 #include <memory>
 #include "hrrn.h"
+#include <functional>
+
+using Factory = std::function<std::unique_ptr<Scheduler>(const std::vector<Process>&)>;
+
+template <class T, class... Args>
+Factory factory(Args... args) {
+  return [=](const std::vector<Process>& s) { return std::make_unique<T>(s, args...); };
+}
+
+void runExperiment10() {
+  std::vector<std::pair<std::string, Factory>> algos = {
+    {"FCFS",       factory<FcfsScheduler>()},
+    {"SJF",        factory<SjfScheduler>()},
+    {"SRTN",       factory<SrtnScheduler>()},
+    {"HRRN",       factory<HrrnScheduler>()},
+    {"RR q=4",     factory<RrScheduler>(4)},
+    {"Prio",       factory<PriorityScheduler>(false, false)},
+    {"Prio+aging", factory<PriorityScheduler>(true, true)},
+    {"MLFQ",       factory<MlfqScheduler>()},
+  };
+  const int sizes[5] = {12, 14, 16, 18, 20};
+
+  std::cout << "Average waiting time\n";
+  std::cout << std::left << std::setw(12) << "Algorithm" << std::right;
+  for (int i = 1; i <= 5; ++i) std::cout << std::setw(9) << "set " + std::to_string(i);
+  std::cout << std::setw(9) << "average" << "\n";
+
+  for (auto& [label, make] : algos) {
+    std::cout << std::left << std::setw(12) << label << std::right;
+    double sum = 0;
+    for (unsigned seed = 1; seed <= 5; ++seed) {
+      auto set = makeRandomSet(seed, sizes[seed - 1]);
+      auto sched = make(set);
+      SimResult r = runSimulation(*sched);
+      sum += r.avgWaiting;
+      std::cout << std::setw(9) << std::fixed << std::setprecision(2) << r.avgWaiting;
+    }
+    std::cout << std::setw(9) << sum / 5 << "\n";
+  }
+}
+
 
 std::vector<Process> makeTestSet() {
   std::vector<Process> procs;
@@ -169,6 +210,11 @@ int main() {
               << "  " << std::setw(3) << r.contextSwitches << "  "
               << std::string(r.contextSwitches, '#') << "\n";
   }
+  }
+  {
+    const int sizes[5] = {12, 14, 16, 18, 20};
+    for (unsigned seed = 1; seed <= 5; ++seed) {
+    saveSet("sets/set" + std::to_string(seed) + ".txt", makeRandomSet(seed, sizes[seed - 1]));
   }
   return 0;
 }
