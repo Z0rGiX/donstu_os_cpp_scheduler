@@ -22,7 +22,7 @@ inline void printProcessTable(const std::vector<Process>& procs){
     std::cout << std::left << std::setw(6) << p.name << std::right
 	      << std::setw(8) << p.arrivalTime <<std::setw(7) << p.burstTime
 	      << std::setw(8) <<p.startTime << std::setw(8) << p.finishTime
-	      << std::setw(7) << p.waitingTime << std::setw(7) << p.turnaroundTIme
+	      << std::setw(7) << p.waitingTime << std::setw(7) << p.turnaroundTime
 	      << std::setw(7) << p.responseTime << std::setw(7) << p.ioWaitTime
 	      << "\n";
   }
