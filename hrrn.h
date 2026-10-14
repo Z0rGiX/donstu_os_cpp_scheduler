@@ -4,11 +4,11 @@
 #include <vector>
 
 // Shortest Job First (невытесняющий)
-class SjfScheduler : public Scheduler {
+class HrrnScheduler : public Scheduler {
 public:
   using Scheduler::Scheduler;
 
-  std::string name() const override { return "SJF"; }
+  std::string name() const override { return "HRRN"; }
 
   void onTick(std::uint64_t tick) override {
     for (auto& p : processes_) {
@@ -22,16 +22,18 @@ public:
   void onProcessReady(int pid, std::uint64_t) override {
     ready_.push_back(pid);
   }
-
   int pickNext(std::uint64_t) override {
-    if (ready_.empty()) return -1;
-    auto it = std::min_element(ready_.begin(), ready_.end(),
-                               [&](int a, int b) {
-                                 return find(a)->burstTime < find(b)->burstTime;
-                               });
-    int pid = *it;
-    ready_.erase(it);
-    return pid;
+  if (ready_.empty()) return -1;
+  auto ratio = [&](int pid) {
+    const Process* p = find(pid);
+    return p ? double(p->waitingTime + p->burstTIme) / double(p->burstTime) : 0.0;
+  };
+  auto it = std::max_element(ready_.begin(), ready_.end(),
+                             [&](int a, int b) { return ratio(a) < ratio(b); });
+  int pid = *it;
+  ready_.erase(it);
+  return pid;
+  }
   }
 
   void onProcessFinished(int pid, std::uint64_t) override {

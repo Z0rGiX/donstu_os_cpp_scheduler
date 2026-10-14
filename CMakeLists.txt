@@ -17,6 +17,7 @@ add_executable(donstu_os_cpp_scheduler main.cpp
     simulator.h
     testsets.h 
     simulator.cpp
+    hrrn.h
 )
 if(CMAKE_CXX_COMPLIER_ID MATCHES "GNU|Clang")
    target_compile_options(donstu_os_cpp_scheduler PRIVATE -Wall -Wextra)
