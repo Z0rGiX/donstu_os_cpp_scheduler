@@ -23,8 +23,7 @@ public:
   virtual void onTick(std::uint64_t tick) = 0;
 
   // Выбор следующего процесса (-1, если нет готовых)
-  virtual int pickNext(std::uint64_t tick) = 0;
-
+  int pickNext(std::uint64_t tick) { (void)tick; return -1;}
   // Уведомления о событиях
   virtual void onProcessFinished(int /*pid*/, std::uint64_t /*tick*/) {}
   virtual void onProcessBlocked(int /*pid*/, std::uint64_t /*tick*/) {}
