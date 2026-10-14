@@ -36,18 +36,7 @@ public:
 
   void onProcessFinished(int pid, std::uint64_t) override {
     Process* p = find(pid);
-    if (p) p->state = ProcessState::TERMINATED;int pickNext(std::uint64_t) override {
-  if (ready_.empty()) return -1;
-  auto ratio = [&](int pid) {
-    const Process* p = find(pid);
-    // TODO: вернуть (waitingTime + burstTime) / burstTime в виде double
-  };
-  auto it = std::max_element(ready_.begin(), ready_.end(),
-                             [&](int a, int b) { return /* TODO: сравнить ratio(a) и ratio(b) */; });
-  int pid = *it;
-  ready_.erase(it);
-  return pid;
-}
+    if (p) p->state = ProcessState::TERMINATED;
   }
 
   void onProcessBlocked(int /*pid*/, std::uint64_t) override {
