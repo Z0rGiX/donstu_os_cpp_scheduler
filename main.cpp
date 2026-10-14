@@ -10,10 +10,9 @@
 #include <iomanip>
 #include <vector>
 #include <memory>
-#include "hrrn.h"
 #include <functional>
+#include "hrrn.h"
 #include "edf.h"
-
 
 using Factory = std::function<std::unique_ptr<Scheduler>(const std::vector<Process>&)>;
 
@@ -54,6 +53,7 @@ void runExperiment10() {
   }
 }
 
+// ---------- вспомогательные функции ----------
 
 std::vector<Process> makeTestSet() {
   std::vector<Process> procs;
@@ -100,6 +100,7 @@ std::vector<Process> makeIoTestSet() {
   add(4, "CPU2", 3, 10, 3);
   return procs;
 }
+
 std::vector<Process> makeConvoySet() {
   std::vector<Process> procs;
   auto add = [&](int pid, const std::string& name, std::uint64_t arrival,
@@ -121,6 +122,34 @@ std::vector<Process> makeConvoySet() {
   add(4, "CPU2", 3, 12, 3);
   return procs;
 }
+
+std::vector<Process> makeDeadlineSet(bool feasible) {
+  std::vector<Process> v;
+  auto add = [&](int pid, const std::string& name, std::uint64_t arrival,
+                 std::uint64_t burst, std::uint64_t deadline) {
+    Process p;
+    p.pid = pid; p.name = name;
+    p.arrivalTime = arrival;
+    p.burstTime = burst;
+    p.remainingTime = burst;
+    p.priority = 1;
+    p.dynamicPriority = 1;
+    p.deadline = deadline;
+    v.push_back(p);
+  };
+  if (feasible) {
+    add(1, "E1", 0, 3, 7);
+    add(2, "E2", 1, 2, 4);
+    add(3, "E3", 2, 2, 9);
+    add(4, "E4", 4, 3, 10);
+  } else {
+    add(1, "F1", 0, 4, 5);
+    add(2, "F2", 1, 3, 5);
+    add(3, "F3", 2, 2, 6);
+  }
+  return v;
+}
+
 void printResult(const SimResult& r) {
   std::cout << std::left << std::setw(30) << r.algorithm
             << " | wait=" << std::setw(7) << std::fixed << std::setprecision(2) << r.avgWaiting
@@ -142,6 +171,16 @@ void printGantt(const SimResult& r) {
   }
   std::cout << "\n";
 }
+
+void printDeadlines(const std::vector<Process>& procs) {
+  for (const auto& p : procs) {
+    std::cout << p.name << ": finish=" << p.finishTime
+              << " deadline=" << p.deadline
+              << (p.finishTime <= p.deadline ? " OK" : " MISSED") << "\n";
+  }
+}
+
+// ---------- main ----------
 
 int main() {
   std::cout << "Case 1: CPU-bound\n";
@@ -180,98 +219,75 @@ int main() {
     SimResult r = runSimulation(rr);
     printGantt(r);
   }
-  {
-   auto set = makeTestSet();
-   RrScheduler rr(set, 2);
-   SimResult r = runSimulation(rr);
-   std::cout << "\nПо процессам, RR (q=2):\n";
-   printProcessTable(rr.processes());
-  }
-  {
-  auto set = makeTestSet();
-  saveSet("set_basic.txt", set);
 
-  std::vector<Process> loaded;
-  if (!loadSet("set_basic.txt", loaded)) {
-    std::cerr << "Не удалось загрузить set_basic.txt\n";
-    return 1;
-  }
-  FcfsScheduler a(set), b(loaded);
-  printResult(runSimulation(a));
-  printResult(runSimulation(b));   // строки должны совпасть
-  }
   {
-  auto set = makeTestSet();
-  std::cout << "\nВлияние кванта в RR (набор makeTestSet)\n";
-  std::cout << "q   wait   turn   resp   CS\n";
-  for (std::uint64_t q : {1, 2, 4, 8, 16}) {
-    RrScheduler rr(set, q);
+    auto set = makeTestSet();
+    RrScheduler rr(set, 2);
     SimResult r = runSimulation(rr);
-    std::cout << std::setw(2) << q << "  " << std::fixed << std::setprecision(2)
-              << r.avgWaiting << "  " << r.avgTurnaround << "  " << r.avgResponse
-              << "  " << std::setw(3) << r.contextSwitches << "  "
-              << std::string(r.contextSwitches, '#') << "\n";
+    std::cout << "\nПо процессам, RR (q=2):\n";
+    printProcessTable(rr.processes());
   }
+
+  {
+    auto set = makeTestSet();
+    saveSet("set_basic.txt", set);
+
+    std::vector<Process> loaded;
+    if (!loadSet("set_basic.txt", loaded)) {
+      std::cerr << "Не удалось загрузить set_basic.txt\n";
+      return 1;
+    }
+    FcfsScheduler a(set), b(loaded);
+    printResult(runSimulation(a));
+    printResult(runSimulation(b));   // строки должны совпасть
   }
+
+  {
+    auto set = makeTestSet();
+    std::cout << "\nВлияние кванта в RR (набор makeTestSet)\n";
+    std::cout << "q   wait   turn   resp   CS\n";
+    for (std::uint64_t q : {1, 2, 4, 8, 16}) {
+      RrScheduler rr(set, q);
+      SimResult r = runSimulation(rr);
+      std::cout << std::setw(2) << q << "  " << std::fixed << std::setprecision(2)
+                << r.avgWaiting << "  " << r.avgTurnaround << "  " << r.avgResponse
+                << "  " << std::setw(3) << r.contextSwitches << "  "
+                << std::string(r.contextSwitches, '#') << "\n";
+    }
+  }
+
+  // Сохранение 5 случайных наборов (задание 10)
   {
     const int sizes[5] = {12, 14, 16, 18, 20};
     for (unsigned seed = 1; seed <= 5; ++seed) {
-    saveSet("sets/set" + std::to_string(seed) + ".txt", makeRandomSet(seed, sizes[seed - 1]));
+      saveSet("sets/set" + std::to_string(seed) + ".txt",
+              makeRandomSet(seed, sizes[seed - 1]));
+    }
   }
-{
+
+  // Многоядерный режим (задание 7)
+  {
     auto set = makeTestSet();
 
     std::cout << "\n=== FCFS x1/x2/x4 ===\n";
     for (int cores : {1, 2, 4}) {
-        FcfsScheduler s(set);
-        printResult(runSimulationMulti(s, cores));
+      FcfsScheduler s(set);
+      printResult(runSimulationMulti(s, cores));
     }
 
     std::cout << "\n=== SJF x1/x2/x4 ===\n";
     for (int cores : {1, 2, 4}) {
-        SjfScheduler s(set);
-        printResult(runSimulationMulti(s, cores));
+      SjfScheduler s(set);
+      printResult(runSimulationMulti(s, cores));
     }
 
     std::cout << "\n=== SRTN x2 ===\n";
     SrtnScheduler s(set);
     printResult(runSimulationMulti(s, 2));
-}
-std::vector<Process> makeDeadlineSet(bool feasible) {
-    std::vector<Process> v;
-    auto add = [&](int pid, const std::string& name, std::uint64_t arrival,
-                   std::uint64_t burst, std::uint64_t deadline) {
-        Process p;
-        p.pid = pid; p.name = name;
-        p.arrivalTime = arrival;
-        p.burstTime = burst;
-        p.remainingTime = burst;
-        p.priority = 1;
-        p.dynamicPriority = 1;
-        p.deadline = deadline;
-        v.push_back(p);
-    };
-    if (feasible) {
-        add(1, "E1", 0, 3, 7);
-        add(2, "E2", 1, 2, 4);
-        add(3, "E3", 2, 2, 9);
-        add(4, "E4", 4, 3, 10);
-    } else {
-        add(1, "F1", 0, 4, 5);
-        add(2, "F2", 1, 3, 5);
-        add(3, "F3", 2, 2, 6);
-    }
-    return v;
-}
+  }
 
-void printDeadlines(const std::vector<Process>& procs) {
-    for (const auto& p : procs) {
-        std::cout << p.name << ": finish=" << p.finishTime
-                  << " deadline=" << p.deadline
-                  << (p.finishTime <= p.deadline ? " OK" : " MISSED") << "\n";
-    }
-}
-{
+  // EDF (задание 12)
+  {
     std::cout << "\n=== EDF, набор E (выполнимый) ===\n";
     auto e = makeDeadlineSet(true);
     EdfScheduler s1(e);
@@ -279,7 +295,8 @@ void printDeadlines(const std::vector<Process>& procs) {
     printResult(r1);
     printGantt(r1);
     printDeadlines(s1.processes());
-
+  }
+  {
     std::cout << "\n=== EDF, набор F (невыполнимый) ===\n";
     auto f = makeDeadlineSet(false);
     EdfScheduler s2(f);
@@ -287,7 +304,7 @@ void printDeadlines(const std::vector<Process>& procs) {
     printResult(r2);
     printGantt(r2);
     printDeadlines(s2.processes());
-}
+  }
+
   return 0;
-}
 }

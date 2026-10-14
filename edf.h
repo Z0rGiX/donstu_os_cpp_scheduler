@@ -1,53 +1,64 @@
 #pragma once
 #include "scheduler.h"
 #include <algorithm>
+#include <vector>
 
-// EDF (Earliest Deadline First) — вытесняющий алгоритм реального времени.
+// Earliest Deadline First (вытесняющий алгоритм реального времени).
 // Выполняется процесс с наименьшим абсолютным дедлайном.
+// Если приходит процесс с более близким дедлайном, текущий вытесняется.
 class EdfScheduler : public Scheduler {
 public:
-    explicit EdfScheduler(const std::vector<Process>& procs)
-        : Scheduler(procs) {}
+  using Scheduler::Scheduler;
 
-    std::string name() const override { return "EDF"; }
+  std::string name() const override { return "EDF"; }
 
-    int pickNext(std::uint64_t) override {
-        if (ready_.empty()) return -1;
-        auto it = std::min_element(ready_.begin(), ready_.end(), [&](int a, int b) {
-            const Process* pa = find(a);
-            const Process* pb = find(b);
-            return pa->deadline < pb->deadline;
-        });
-        int pid = *it;
-        ready_.erase(it);
-        return pid;
+  void onTick(std::uint64_t tick) override {
+    for (auto& p : processes_) {
+      if (p.state == ProcessState::NEW && p.arrivalTime <= tick) {
+        p.state = ProcessState::READY;
+        ready_.push_back(p.pid);
+      }
     }
+  }
 
-    bool shouldPreempt(int currentPid, std::uint64_t) override {
-        Process* cur = find(currentPid);
-        if (!cur || cur->isFinished()) return false;
-        for (int pid : ready_) {
-            Process* p = find(pid);
-            if (p && p->deadline < cur->deadline) return true;
-        }
-        return false;
+  void onProcessReady(int pid, std::uint64_t) override {
+    ready_.push_back(pid);
+  }
+
+  int pickNext(std::uint64_t) override {
+    if (ready_.empty()) return -1;
+    auto it = std::min_element(ready_.begin(), ready_.end(),
+                               [&](int a, int b) {
+                                 return find(a)->deadline < find(b)->deadline;
+                               });
+    int pid = *it;
+    ready_.erase(it);
+    return pid;
+  }
+
+  void onProcessFinished(int pid, std::uint64_t) override {
+    Process* p = find(pid);
+    if (p) p->state = ProcessState::TERMINATED;
+  }
+
+  void onProcessBlocked(int /*pid*/, std::uint64_t) override {
+    // вернётся через onProcessReady
+  }
+
+  void onProcessPreempted(int pid, std::uint64_t) override {
+    ready_.push_back(pid);
+  }
+
+  bool shouldPreempt(int currentPid, std::uint64_t) override {
+    Process* cur = find(currentPid);
+    if (!cur || cur->isFinished()) return false;
+    for (int pid : ready_) {
+      Process* p = find(pid);
+      if (p && p->deadline < cur->deadline) return true;
     }
-
-    void onProcessReady(int pid, std::uint64_t) override {
-        ready_.push_back(pid);
-    }
-
-    void onProcessBlocked(int /*pid*/, std::uint64_t) override { }
-
-    void onProcessPreempted(int pid, std::uint64_t) override {
-        ready_.push_back(pid);
-    }
-
-    void onProcessFinished(int pid, std::uint64_t) override {
-        Process* p = find(pid);
-        if (p) p->state = ProcessState::TERMINATED;
-    }
+    return false;
+  }
 
 private:
-    // ready_ и другие поля — как в SrtnScheduler
+  std::vector<int> ready_;
 };
